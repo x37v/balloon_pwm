@@ -518,7 +518,8 @@ gccversion :
 
 # Program the device.
 program: $(TARGET).hex $(TARGET).eep
-	$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
+	@teensy_loader_cli -mmcu=$(MCU) -p -w -v $(TARGET).hex
+	#$(AVRDUDE) $(AVRDUDE_FLAGS) $(AVRDUDE_WRITE_FLASH) $(AVRDUDE_WRITE_EEPROM)
 
 flip: $(TARGET).hex
 	batchisp -hardware usb -device $(MCU) -operation erase f
