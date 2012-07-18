@@ -22,25 +22,44 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 #include <stdlib.h>
+#include <implementations/lufa_midi/midi_usb.h>
+#include <avr/wdt.h>
 
-ISR(TIMER1_COMPA_vect) {
+SIGNAL(TIMER1_COMPA_vect) {
    PORTB ^= (_BV(PINB6) | _BV(PINB5));
    TCNT1 = 0;
 }
 
+void pitchbend_callback(MidiDevice * device, uint8_t channel, uint8_t lsb, uint8_t msb);
+
 int main(void) {
+   MidiDevice midi_device;
+
+   //setup the device
+   midi_usb_init(&midi_device);
+   midi_register_pitchbend_callback(&midi_device, pitchbend_callback);
+
    //set up output
    DDRB |= _BV(PINB6) | _BV(PINB5);;
    PORTB = _BV(PINB6);
 
    //set up timer
    //prescaler
-   TCCR1B =  _BV(CS11);
+   TCCR1B =  _BV(CS11) | _BV(CS10);
 
-   OCR1A = 0xFFF;
+   OCR1A = 0xF;
    TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
 
    sei();
+   wdt_disable();
 
-   while(1);
+   while(1)
+      midi_device_process(&midi_device);
 }
+
+void pitchbend_callback(MidiDevice * device, uint8_t channel, uint8_t lsb, uint8_t msb) {
+   uint16_t combined = lsb | ((uint16_t)msb << 7);
+   OCR1A = 0xF + combined;
+   midi_send_pitchbend(device, channel, (int16_t)combined - 8192);
+}
+
