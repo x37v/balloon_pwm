@@ -31,13 +31,18 @@ SIGNAL(TIMER1_COMPA_vect) {
 }
 
 void pitchbend_callback(MidiDevice * device, uint8_t channel, uint8_t lsb, uint8_t msb);
+void cc_callback(MidiDevice * device, uint8_t channel, uint8_t num, uint8_t value);
 
 int main(void) {
    MidiDevice midi_device;
 
+   sei();
+   wdt_disable();
+
    //setup the device
    midi_usb_init(&midi_device);
    midi_register_pitchbend_callback(&midi_device, pitchbend_callback);
+   //midi_register_cc_callback(&midi_device, cc_callback);
 
    //set up output
    DDRB |= _BV(PINB6) | _BV(PINB5);;
@@ -50,11 +55,14 @@ int main(void) {
    OCR1A = 0xF;
    TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
 
-   sei();
-   wdt_disable();
 
    while(1)
       midi_device_process(&midi_device);
+}
+
+void cc_callback(MidiDevice * device, uint8_t channel, uint8_t num, uint8_t value) {
+   midi_send_cc(device, channel, num, value);
+   OCR1A = 0xF + ((uint16_t)value << 7);
 }
 
 void pitchbend_callback(MidiDevice * device, uint8_t channel, uint8_t lsb, uint8_t msb) {
