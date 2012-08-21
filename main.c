@@ -25,11 +25,6 @@
 #include <implementations/lufa_midi/midi_usb.h>
 #include <avr/wdt.h>
 
-SIGNAL(TIMER1_COMPA_vect) {
-   PORTB ^= (_BV(PINB6) | _BV(PINB5));
-   TCNT1 = 0;
-}
-
 void pitchbend_callback(MidiDevice * device, uint8_t channel, uint8_t lsb, uint8_t msb);
 void cc_callback(MidiDevice * device, uint8_t channel, uint8_t num, uint8_t value);
 
@@ -45,16 +40,38 @@ int main(void) {
    //midi_register_cc_callback(&midi_device, cc_callback);
 
    //set up output
-   DDRB |= _BV(PINB6) | _BV(PINB5);;
-   PORTB = _BV(PINB6);
+   DDRB |= _BV(PINB6) | _BV(PINB5);
+   PORTB = 0;
 
    //set up timer
-   //prescaler
-   TCCR1B =  _BV(CS11) | _BV(CS10);
+   
+   // timer0 off
+   TCCR0A = 0;
+   TCCR0B = 0;
+   TCNT0 = 0;
 
-   OCR1A = 0xF;
-   TIMSK1 = _BV(TOIE1) | _BV(OCIE1A);
+   // timer1 off
+   TCCR1A = 0;
+   TCCR1B = 0; 
+   TCCR1C = 0; 
+   TCNT1L = 0;
 
+   OCR0A = 0;  // green  invert
+   OCR0B = 0;  // red    invert
+   OCR1AL = 0;  // blue    invert
+   OCR1BL = 0xFF;  // all    invert
+
+   //timer1 on, 8 bit PWM mode
+   //TCCR1A = 0xB1;
+   //TCCR1B = 0x0B;
+   
+   TCCR1A = _BV(COM1A0) | _BV(COM1B1) | _BV(COM1B0) |
+      _BV(WGM11) | _BV(WGM10);
+
+   //TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);
+   TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
+
+   TIMSK1 = 0;
 
    while(1)
       midi_device_process(&midi_device);
@@ -67,7 +84,10 @@ void cc_callback(MidiDevice * device, uint8_t channel, uint8_t num, uint8_t valu
 
 void pitchbend_callback(MidiDevice * device, uint8_t channel, uint8_t lsb, uint8_t msb) {
    uint16_t combined = lsb | ((uint16_t)msb << 7);
-   OCR1A = 0xF + combined;
+   combined = 0xF + combined;
+
+   OCR1AL = combined;
+
    midi_send_pitchbend(device, channel, (int16_t)combined - 8192);
 }
 
