@@ -20,6 +20,7 @@
 #include <inttypes.h>
 #include <avr/io.h>
 #include <util/delay.h>
+#include <util/atomic.h>
 #include <avr/interrupt.h>
 #include <stdlib.h>
 #include <implementations/lufa_midi/midi_usb.h>
@@ -65,8 +66,7 @@ int main(void) {
    //TCCR1A = 0xB1;
    //TCCR1B = 0x0B;
    
-   TCCR1A = _BV(COM1A0) | _BV(COM1B1) | _BV(COM1B0) |
-      _BV(WGM11) | _BV(WGM10);
+   TCCR1A = _BV(COM1A0) | _BV(COM1B1) | _BV(COM1B0);
 
    //TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);
    TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
@@ -86,7 +86,11 @@ void pitchbend_callback(MidiDevice * device, uint8_t channel, uint8_t lsb, uint8
    uint16_t combined = lsb | ((uint16_t)msb << 7);
    combined = 0xF + combined;
 
-   OCR1AL = combined;
+   ATOMIC_BLOCK(ATOMIC_FORCEON) {
+      OCR1AL = combined;
+      TCNT1 = 0; 
+   }
+
 
    midi_send_pitchbend(device, channel, (int16_t)combined - 8192);
 }
