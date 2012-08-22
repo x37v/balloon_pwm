@@ -66,9 +66,8 @@ int main(void) {
    //TCCR1A = 0xB1;
    //TCCR1B = 0x0B;
    
+   //CTC mode, resets clock when it meets OCR1A
    TCCR1A = _BV(COM1A0) | _BV(COM1B1) | _BV(COM1B0);
-
-   //TCCR1B = _BV(WGM13) | _BV(WGM12) | _BV(CS10);
    TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
 
    TIMSK1 = 0;
@@ -87,6 +86,7 @@ void pitchbend_callback(MidiDevice * device, uint8_t channel, uint8_t lsb, uint8
    combined = 0xF + combined;
 
    ATOMIC_BLOCK(ATOMIC_FORCEON) {
+      OCR1AH = (combined >> 8);
       OCR1AL = combined;
       TCNT1 = 0; 
    }
