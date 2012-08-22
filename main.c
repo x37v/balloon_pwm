@@ -41,26 +41,11 @@ int main(void) {
    //midi_register_cc_callback(&midi_device, cc_callback);
 
    //set up timer
-   
-   // timer0 off
-   TCCR0A = 0;
-   TCCR0B = 0;
-   TCNT0 = 0;
-
-   // timer1 off
    TCCR1A = 0;
    TCCR1B = 0; 
    TCCR1C = 0; 
    TCNT1L = 0;
-
-   OCR0A = 0;  // green  invert
-   OCR0B = 0;  // red    invert
-   OCR1AL = 0;  // blue    invert
-   OCR1BL = 0xFF;  // all    invert
-
-   //timer1 on, 8 bit PWM mode
-   //TCCR1A = 0xB1;
-   //TCCR1B = 0x0B;
+   OCR1AL = 0xF;
    
    //CTC mode, resets clock when it meets OCR1A
    TCCR1A = _BV(COM1A0) |  _BV(COM1B0);
@@ -83,15 +68,13 @@ void cc_callback(MidiDevice * device, uint8_t channel, uint8_t num, uint8_t valu
 
 void pitchbend_callback(MidiDevice * device, uint8_t channel, uint8_t lsb, uint8_t msb) {
    uint16_t combined = lsb | ((uint16_t)msb << 7);
-   combined = 0xF + combined;
+   midi_send_pitchbend(device, channel, (int16_t)combined - 8192);
 
+   combined = 0xF + combined;
    ATOMIC_BLOCK(ATOMIC_FORCEON) {
       OCR1AH = (combined >> 8);
       OCR1AL = combined;
-      TCNT1 = 0; 
+      TCNT1L = 0; 
    }
-
-
-   midi_send_pitchbend(device, channel, (int16_t)combined - 8192);
 }
 
