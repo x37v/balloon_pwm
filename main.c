@@ -40,10 +40,6 @@ int main(void) {
    midi_register_pitchbend_callback(&midi_device, pitchbend_callback);
    //midi_register_cc_callback(&midi_device, cc_callback);
 
-   //set up output
-   DDRB |= _BV(PINB6) | _BV(PINB5);
-   PORTB = 0;
-
    //set up timer
    
    // timer0 off
@@ -67,8 +63,12 @@ int main(void) {
    //TCCR1B = 0x0B;
    
    //CTC mode, resets clock when it meets OCR1A
-   TCCR1A = _BV(COM1A0) | _BV(COM1B1) | _BV(COM1B0);
+   TCCR1A = _BV(COM1A0) |  _BV(COM1B0);
    TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
+   TCCR1C = _BV(FOC1A);
+
+   //set up output
+   DDRB |= _BV(PINB6) | _BV(PINB5);
 
    TIMSK1 = 0;
 
