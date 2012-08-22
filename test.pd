@@ -1,11 +1,13 @@
-#N canvas 1167 278 450 300 10;
+#N canvas 1164 255 450 300 10;
 #X obj 121 129 bendout;
 #X obj 122 74 hsl 128 15 -8193 8192 0 0 empty empty empty -2 -8 0 10
--262144 -1 -1 800 1;
+-262144 -1 -1 12600 1;
 #X obj 209 175 bendin;
 #X obj 218 210 pack f f;
 #X obj 223 251 print in;
-#X connect 1 0 0 0;
+#X floatatom 119 99 8 0 0 0 - - -;
+#X connect 1 0 5 0;
 #X connect 2 0 3 0;
 #X connect 2 1 3 1;
 #X connect 3 0 4 0;
+#X connect 5 0 0 0;
