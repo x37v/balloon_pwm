@@ -27,7 +27,6 @@
 #include <avr/wdt.h>
 
 void pitchbend_callback(MidiDevice * device, uint8_t channel, uint8_t lsb, uint8_t msb);
-void cc_callback(MidiDevice * device, uint8_t channel, uint8_t num, uint8_t value);
 
 int main(void) {
    MidiDevice midi_device;
@@ -38,7 +37,6 @@ int main(void) {
    //setup the device
    midi_usb_init(&midi_device);
    midi_register_pitchbend_callback(&midi_device, pitchbend_callback);
-   //midi_register_cc_callback(&midi_device, cc_callback);
 
    //set up timer
    TCCR1A = 0;
@@ -47,10 +45,14 @@ int main(void) {
    TCNT1L = 0;
    OCR1AL = 0xF;
    
+   //toggles OC1[A,B] when the timer reaches the top
+   //TCCR1A = _BV(COM1A0) |  _BV(COM1B0);
+   TCCR1A = _BV(COM1A1) | _BV(COM1A0) |  _BV(COM1B0);
+
    //CTC mode, resets clock when it meets OCR1A
-   TCCR1A = _BV(COM1A0) |  _BV(COM1B0);
    TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
-   TCCR1C = _BV(FOC1A);
+
+   TCCR1C = _BV(FOC1A); //force one of the outputs to high
 
    //set up output
    DDRB |= _BV(PINB6) | _BV(PINB5);
@@ -61,20 +63,15 @@ int main(void) {
       midi_device_process(&midi_device);
 }
 
-void cc_callback(MidiDevice * device, uint8_t channel, uint8_t num, uint8_t value) {
-   midi_send_cc(device, channel, num, value);
-   OCR1A = 0xF + ((uint16_t)value << 7);
-}
-
 void pitchbend_callback(MidiDevice * device, uint8_t channel, uint8_t lsb, uint8_t msb) {
    uint16_t combined = lsb | ((uint16_t)msb << 7);
    midi_send_pitchbend(device, channel, (int16_t)combined - 8192);
 
-   combined = 0xF + combined;
+   combined = 1 + (16384 -  combined);
    ATOMIC_BLOCK(ATOMIC_FORCEON) {
       OCR1AH = (combined >> 8);
-      OCR1AL = combined;
-      TCNT1L = 0; 
+      OCR1AL = combined & 0xFF;
+      //TCNT1L = 0; 
    }
 }
 
