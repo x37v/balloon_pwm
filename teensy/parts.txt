@@ -1,0 +1,23 @@
+0.1uf   1 x http://www.digikey.com/product-detail/en/RPER71H104K2P1A03B/490-3810-ND/946446
+100uf   1 x http://www.digikey.com/product-detail/en/ECA-1EM101/P5152-ND/245011?cur=USD
+
+
+10k     1 x http://www.digikey.com/product-detail/en/CFR-25JB-52-10K/10KQBK-ND/338?cur=USD 
+1k      1 x http://www.digikey.com/product-detail/en/CFR-25JB-52-1K/1.0KQBK-ND/96
+220     1 x http://www.digikey.com/product-detail/en/CFR-25JB-52-220R/220QBK-ND/1295
+
+micro   1 x http://www.digikey.com/product-detail/en/ATTINY24A-PU/ATTINY24A-PU-ND/2050990
+socket  1 x http://www.digikey.com/product-detail/en/1-390261-3/A100205-ND/1125623
+
+button  1 x http://www.digikey.com/product-detail/en/TL1105SPF100Q/EG2502-ND/378968
+
+bjt     1 x http://www.digikey.com/product-detail/en/KSD5041RTA/KSD5041RTAFSCT-ND/3478163
+
+
+
+reserve:
+
+crystal 16mhz 1x    http://www.digikey.com/product-detail/en/ZTT-16.00MX/X908-ND/170095
+2x 18pF resistors
+Mosfet
+
