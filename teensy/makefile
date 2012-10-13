@@ -26,7 +26,7 @@ SRC          = \
                xnormidi/implementations/lufa_midi/Descriptors.c \
                $(LUFA_SRC_USB)                     \
                $(LUFA_SRC_USBCLASS)
-LUFA_PATH    = ../LUFA-120730/LUFA/
+LUFA_PATH    = ../../LUFA-120730/LUFA/
 CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -Ixnormidi/implementations/lufa_midi/Config/ -Ixnormidi/
 LD_FLAGS     =
 
