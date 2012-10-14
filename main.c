@@ -9,6 +9,7 @@
 #include <avr/interrupt.h>
 #include <stdlib.h>
 #include <avr/wdt.h>
+#include <util/atomic.h>
 #include "gamma.h"
 
 #define LED_R_PIN PINA4
@@ -31,9 +32,11 @@ volatile uint8_t led_r_off = 0;
 volatile uint8_t led_g_off = 0;
 volatile uint8_t led_b_off = 0;
 
+volatile uint8_t led_timeout = 0;
+
 volatile uint8_t buzzer_state = 0;
-volatile uint8_t buzzer_cnt = 0;
-volatile uint8_t buzzer_max = 0;
+volatile uint16_t buzzer_cnt = 0;
+volatile uint16_t buzzer_max = 512;
 
 void toggle_buzzer(void);
 
@@ -41,6 +44,12 @@ void toggle_buzzer(void);
 ISR(TIM0_COMPA_vect) {
   TCNT0 = 0;
   led_count++;
+
+  if (led_count == 0) {
+    if (led_timeout != 0 && --led_timeout == 0) {
+      led_r_off = led_g_off = led_b_off = 0;
+    }
+  }
 
   if (led_count == led_r_off)
     PORTA &= ~(_BV(LED_R_PIN));
@@ -54,17 +63,20 @@ ISR(TIM0_COMPA_vect) {
     PORTA &= ~(_BV(LED_B_PIN));
   else if (led_count == 0)
     PORTA |= _BV(LED_B_PIN);
+}
 
+ISR(TIM1_COMPA_vect) {
+  TCNT1 = 0;
   buzzer_cnt++;
   if (buzzer_cnt >= buzzer_max) {
     buzzer_cnt = 0;
     //buzzer_max++;
     toggle_buzzer();
+    //led_timeout = 12;
+    //led_r_off = rand();
+    //led_g_off = rand();
+    //led_b_off = rand();
   }
-}
-
-ISR(TIM1_OVF_vect) {
-  buzzer_max = rand();
 }
 
 void enable_buzzer(void) {
@@ -90,7 +102,7 @@ void enable_buzzer(void) {
 void init_timer0(void) {
   TCCR0A = 0; //normal mode
   TCCR0B = _BV(CS00); //no prescale
-  OCR0A = 16;
+  OCR0A = 8;
 
   //TIMSK0 = _BV(TOIE0); //enable interrupts
   TIMSK0 = _BV(OCIE0A); //enable interrupts for output compare match a
@@ -101,10 +113,10 @@ void init_timer1(void) {
   //set up timer 0
   TCCR1A = 0; //normal mode
   TCCR1B = _BV(CS11);
-  //OCR1A = 16;
+  OCR1A = 8;
 
-  TIMSK1 = _BV(TOIE1); //enable interrupts
-  //TIMSK1 = _BV(OCIE1A); //enable interrupts for output compare match a
+  //TIMSK1 = _BV(TOIE1); //enable interrupts
+  TIMSK1 = _BV(OCIE1A); //enable interrupts for output compare match a
   //TIFR0 = _BV(OCF0A);
 }
 
@@ -141,7 +153,21 @@ void toggle_buzzer(void) {
   buzzer_state ^= 1;
 }
 
+void set_led(uint8_t r, uint8_t g, uint8_t b, uint8_t timeout) {
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    led_count = 0;
+    led_timeout = timeout;
+    led_r_off = r;
+    led_g_off = g;
+    led_b_off = b;
+  }
+}
+
 int main(void) {
+  static uint8_t button_down_index = 0;
+  static uint8_t button_down_history = 0;
+  static uint8_t button_down_last = FALSE;
+
   wdt_disable();
 
   init_io();
@@ -150,18 +176,7 @@ int main(void) {
   //enable_buzzer();
 
   sei();
-
-  uint8_t r = 0;
-  uint8_t g = 23;
-  uint8_t b = 64;
-
-  uint8_t button_down_index = 0;
-  uint8_t button_down_history = 0;
-  uint8_t button_down_last = FALSE;
-
-  //PORTA |= _BV(LED_R_PIN);
   while(1) {
-
     //debounce button
     if (!(PINA & _BV(BUTTON_PIN)))
       button_down_history |= (1 << button_down_index);
@@ -169,33 +184,23 @@ int main(void) {
       button_down_history &= ~(1 << button_down_index);
     button_down_index = (button_down_index + 1) % 8;
 
-    if (button_down_history == 0) { //up
-      if (button_down_last) {
-        //led_r_off = 0xFF;
-        //button state changed
-        button_down_last = FALSE;
-      }
-    } else if (button_down_history == 0xFF) { //down
-      if (!button_down_last) {
-        toggle_buzzer();
-        buzzer_max = rand();
-        //button state changed
-        button_down_last = TRUE;
-        if (led_r_off)
-          led_r_off = 0;
-        else
-          led_r_off = 0xFF;
-      }
+    if (button_down_history == 0 && button_down_last) {
+      //button is now up
+      button_down_last = FALSE;
+
+    } else if (button_down_history == 0xFF && !button_down_last) {
+      //button is now down
+      button_down_last = TRUE;
+
+      //toggle_buzzer();
+      //buzzer_max = (rand() << 3);
+      buzzer_max = rand();
+
+      set_led(rand(), rand(), rand(), 16);
     }
-
-      ////_delay_ms(1);
-      //r++;
-      //g++;
-      //b++;
-      //led_r_off = gamma_correct(r);
-      //led_g_off = gamma_correct(g);
-      //led_b_off = gamma_correct(b);
-
+    //led_r_off = gamma_correct(r);
+    //led_g_off = gamma_correct(g);
+    //led_b_off = gamma_correct(b);
   }
 }
 
