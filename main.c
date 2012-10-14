@@ -46,6 +46,9 @@ uint8_t color_sets[NUM_COLORSETS * 3] = {
   255, 0, 0
 };
 
+void enable_buzzer(uint8_t v);
+void disable_buzzer(void);
+
 //ISR(TIM0_OVF_vect) {
 ISR(TIM0_COMPA_vect) {
   TCNT0 = 0;
@@ -54,6 +57,7 @@ ISR(TIM0_COMPA_vect) {
   if (led_count == 0) {
     if (led_timeout != 0 && --led_timeout == 0) {
       led_r_off = led_g_off = led_b_off = 0;
+      //disable_buzzer();
     }
   }
 
@@ -71,7 +75,7 @@ ISR(TIM0_COMPA_vect) {
     PORTA |= _BV(LED_B_PIN);
 }
 
-void enable_buzzer(void) {
+void init_buzzer() {
   //set up timer 1
   TCCR1A = 0;
   TCCR1B = 0; 
@@ -79,16 +83,23 @@ void enable_buzzer(void) {
   TCNT1L = 0;
   OCR1AL = 0xF;
 
-  //toggles OC1[A,B] when the timer reaches the top
-  //TCCR1A = _BV(COM1A0) |  _BV(COM1B0);
-  TCCR1A = _BV(COM1A1) | _BV(COM1A0) |  _BV(COM1B0);
-
   //CTC mode, resets clock when it meets OCR1A
   TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
 
-  TCCR1C = _BV(FOC1A); //force one of the outputs to high
-
   TIMSK1 = 0;
+}
+
+void enable_buzzer(uint8_t v) {
+  //toggles OC1[A,B] when the timer reaches the top
+  //TCCR1A = _BV(COM1A0) |  _BV(COM1B0);
+  TCCR1A = _BV(COM1A1) | _BV(COM1A0) |  _BV(COM1B0);
+  TCCR1C = _BV(FOC1A); //force one of the outputs to high
+  OCR1AL = v;
+  TCNT1 = 0;
+}
+
+void disable_buzzer(void) {
+  TCCR1A = 0;
 }
 
 void init_timer0(void) {
@@ -140,7 +151,7 @@ int main(void) {
 
   init_io();
   init_timer0();
-  enable_buzzer();
+  init_buzzer();
 
   sei();
   while(1) {
@@ -159,8 +170,7 @@ int main(void) {
       //button is now down
       button_down_last = TRUE;
 
-      OCR1AL = rand();
-      TCNT1 = 0;
+      enable_buzzer(rand());
 
       set_led(color_sets + 3 * (rand() % NUM_COLORSETS), 16);
     }
