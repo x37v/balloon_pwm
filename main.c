@@ -18,6 +18,9 @@
 #define BUTTON_PIN PINA7
 #define IGNITE_PIN PINA0
 
+#define BUZZER_PIN0 PINA6
+#define BUZZER_PIN1 PINA5
+
 #define TRUE 1
 #define FALSE 0
 
@@ -27,6 +30,12 @@ volatile uint8_t led_count = 0;
 volatile uint8_t led_r_off = 0;
 volatile uint8_t led_g_off = 0;
 volatile uint8_t led_b_off = 0;
+
+volatile uint8_t buzzer_state = 0;
+volatile uint8_t buzzer_cnt = 0;
+volatile uint8_t buzzer_max = 0;
+
+void toggle_buzzer(void);
 
 //ISR(TIM0_OVF_vect) {
 ISR(TIM0_COMPA_vect) {
@@ -45,6 +54,17 @@ ISR(TIM0_COMPA_vect) {
     PORTA &= ~(_BV(LED_B_PIN));
   else if (led_count == 0)
     PORTA |= _BV(LED_B_PIN);
+
+  buzzer_cnt++;
+  if (buzzer_cnt >= buzzer_max) {
+    buzzer_cnt = 0;
+    //buzzer_max++;
+    toggle_buzzer();
+  }
+}
+
+ISR(TIM1_OVF_vect) {
+  buzzer_max = rand();
 }
 
 void enable_buzzer(void) {
@@ -68,7 +88,6 @@ void enable_buzzer(void) {
 }
 
 void init_timer0(void) {
-  //set up timer 0
   TCCR0A = 0; //normal mode
   TCCR0B = _BV(CS00); //no prescale
   OCR0A = 16;
@@ -76,6 +95,17 @@ void init_timer0(void) {
   //TIMSK0 = _BV(TOIE0); //enable interrupts
   TIMSK0 = _BV(OCIE0A); //enable interrupts for output compare match a
   TIFR0 = _BV(OCF0A);
+}
+
+void init_timer1(void) {
+  //set up timer 0
+  TCCR1A = 0; //normal mode
+  TCCR1B = _BV(CS11);
+  //OCR1A = 16;
+
+  TIMSK1 = _BV(TOIE1); //enable interrupts
+  //TIMSK1 = _BV(OCIE1A); //enable interrupts for output compare match a
+  //TIFR0 = _BV(OCF0A);
 }
 
 void init_io(void) {
@@ -91,10 +121,24 @@ void init_io(void) {
   DDRA |= _BV(IGNITE_PIN);
 
   //set up output PWM
-  DDRA |= _BV(PINA6) | _BV(PINA5);
+  DDRA |= _BV(BUZZER_PIN0) | _BV(BUZZER_PIN1);
+
+  //set buzzer pin
+  PORTA |= _BV(BUZZER_PIN0);
 
   //button is input [0], set pullup
   PORTA |= _BV(BUTTON_PIN);
+}
+
+void toggle_buzzer(void) {
+  if (buzzer_state) {
+    PORTA &= ~_BV(BUZZER_PIN1);
+    PORTA |= _BV(BUZZER_PIN0);
+  } else {
+    PORTA &= ~_BV(BUZZER_PIN0);
+    PORTA |= _BV(BUZZER_PIN1);
+  }
+  buzzer_state ^= 1;
 }
 
 int main(void) {
@@ -102,7 +146,8 @@ int main(void) {
 
   init_io();
   init_timer0();
-  enable_buzzer();
+  init_timer1();
+  //enable_buzzer();
 
   sei();
 
@@ -132,6 +177,8 @@ int main(void) {
       }
     } else if (button_down_history == 0xFF) { //down
       if (!button_down_last) {
+        toggle_buzzer();
+        buzzer_max = rand();
         //button state changed
         button_down_last = TRUE;
         if (led_r_off)
