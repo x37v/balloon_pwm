@@ -18,6 +18,9 @@
 #define BUTTON_PIN PINA7
 #define IGNITE_PIN PINA0
 
+#define TRUE 1
+#define FALSE 0
+
 volatile uint8_t led_count = 0;
 
 //when do you turn them off
@@ -106,10 +109,38 @@ int main(void) {
   uint8_t r = 0;
   uint8_t g = 23;
   uint8_t b = 64;
+
+  uint8_t button_down_index = 0;
+  uint8_t button_down_history = 0;
+  uint8_t button_down_last = FALSE;
+
   //PORTA |= _BV(LED_R_PIN);
   while(1) {
-    if (!(PINA & _BV(BUTTON_PIN))) {
-      led_r_off = 255;
+
+    //debounce button
+    if (!(PINA & _BV(BUTTON_PIN)))
+      button_down_history |= (1 << button_down_index);
+    else
+      button_down_history &= ~(1 << button_down_index);
+    button_down_index = (button_down_index + 1) % 8;
+
+    if (button_down_history == 0) { //up
+      if (button_down_last) {
+        //led_r_off = 0xFF;
+        //button state changed
+        button_down_last = FALSE;
+      }
+    } else if (button_down_history == 0xFF) { //down
+      if (!button_down_last) {
+        //button state changed
+        button_down_last = TRUE;
+        if (led_r_off)
+          led_r_off = 0;
+        else
+          led_r_off = 0xFF;
+      }
+    }
+
       ////_delay_ms(1);
       //r++;
       //g++;
@@ -117,11 +148,7 @@ int main(void) {
       //led_r_off = gamma_correct(r);
       //led_g_off = gamma_correct(g);
       //led_b_off = gamma_correct(b);
-      //PORTA |= _BV(LED_B_PIN);
-    } else {
-      led_r_off = 0;
-      //PORTA &= ~(_BV(LED_B_PIN));
-    }
+
   }
 }
 
