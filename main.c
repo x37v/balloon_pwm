@@ -38,6 +38,18 @@ volatile uint8_t buzzer_state = 0;
 volatile uint16_t buzzer_cnt = 0;
 volatile uint16_t buzzer_max = 512;
 
+#define NUM_COLORSETS 8
+uint8_t color_sets[NUM_COLORSETS * 3] = {
+  0, 255, 0,
+  255, 255, 0,
+  0, 255, 255,
+  0, 255, 0,
+  0, 1, 65,
+  65, 65, 2,
+  23, 0, 59,
+  255, 0, 0
+};
+
 void toggle_buzzer(void);
 
 //ISR(TIM0_OVF_vect) {
@@ -102,7 +114,7 @@ void enable_buzzer(void) {
 void init_timer0(void) {
   TCCR0A = 0; //normal mode
   TCCR0B = _BV(CS00); //no prescale
-  OCR0A = 8;
+  OCR0A = 16;
 
   //TIMSK0 = _BV(TOIE0); //enable interrupts
   TIMSK0 = _BV(OCIE0A); //enable interrupts for output compare match a
@@ -113,11 +125,11 @@ void init_timer1(void) {
   //set up timer 0
   TCCR1A = 0; //normal mode
   TCCR1B = _BV(CS11);
-  OCR1A = 8;
+  OCR1A = 16;
 
   //TIMSK1 = _BV(TOIE1); //enable interrupts
   TIMSK1 = _BV(OCIE1A); //enable interrupts for output compare match a
-  //TIFR0 = _BV(OCF0A);
+  TIFR1 = _BV(OCF1A);
 }
 
 void init_io(void) {
@@ -153,14 +165,12 @@ void toggle_buzzer(void) {
   buzzer_state ^= 1;
 }
 
-void set_led(uint8_t r, uint8_t g, uint8_t b, uint8_t timeout) {
-  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    led_count = 0;
-    led_timeout = timeout;
-    led_r_off = r;
-    led_g_off = g;
-    led_b_off = b;
-  }
+inline void set_led(uint8_t* rgb, uint8_t timeout) {
+  led_r_off = *rgb;
+  led_g_off = *(rgb + 1);
+  led_b_off = *(rgb + 2);
+  led_count = 0;
+  led_timeout = timeout;
 }
 
 int main(void) {
@@ -172,8 +182,8 @@ int main(void) {
 
   init_io();
   init_timer0();
-  init_timer1();
-  //enable_buzzer();
+  //init_timer1();
+  enable_buzzer();
 
   sei();
   while(1) {
@@ -194,9 +204,11 @@ int main(void) {
 
       //toggle_buzzer();
       //buzzer_max = (rand() << 3);
-      buzzer_max = rand();
+      //buzzer_max = rand();
+      OCR1AL = rand();
+      TCNT1 = 0;
 
-      set_led(rand(), rand(), rand(), 16);
+      set_led(color_sets + 3 * (rand() % NUM_COLORSETS), 16);
     }
     //led_r_off = gamma_correct(r);
     //led_g_off = gamma_correct(g);
