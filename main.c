@@ -34,10 +34,6 @@ volatile uint8_t led_b_off = 0;
 
 volatile uint8_t led_timeout = 0;
 
-volatile uint8_t buzzer_state = 0;
-volatile uint16_t buzzer_cnt = 0;
-volatile uint16_t buzzer_max = 512;
-
 #define NUM_COLORSETS 8
 uint8_t color_sets[NUM_COLORSETS * 3] = {
   0, 255, 0,
@@ -49,8 +45,6 @@ uint8_t color_sets[NUM_COLORSETS * 3] = {
   23, 0, 59,
   255, 0, 0
 };
-
-void toggle_buzzer(void);
 
 //ISR(TIM0_OVF_vect) {
 ISR(TIM0_COMPA_vect) {
@@ -75,20 +69,6 @@ ISR(TIM0_COMPA_vect) {
     PORTA &= ~(_BV(LED_B_PIN));
   else if (led_count == 0)
     PORTA |= _BV(LED_B_PIN);
-}
-
-ISR(TIM1_COMPA_vect) {
-  TCNT1 = 0;
-  buzzer_cnt++;
-  if (buzzer_cnt >= buzzer_max) {
-    buzzer_cnt = 0;
-    //buzzer_max++;
-    toggle_buzzer();
-    //led_timeout = 12;
-    //led_r_off = rand();
-    //led_g_off = rand();
-    //led_b_off = rand();
-  }
 }
 
 void enable_buzzer(void) {
@@ -121,17 +101,6 @@ void init_timer0(void) {
   TIFR0 = _BV(OCF0A);
 }
 
-void init_timer1(void) {
-  //set up timer 0
-  TCCR1A = 0; //normal mode
-  TCCR1B = _BV(CS11);
-  OCR1A = 16;
-
-  //TIMSK1 = _BV(TOIE1); //enable interrupts
-  TIMSK1 = _BV(OCIE1A); //enable interrupts for output compare match a
-  TIFR1 = _BV(OCF1A);
-}
-
 void init_io(void) {
   //enable pullups
   MCUCR &= ~_BV(PUD);
@@ -154,17 +123,6 @@ void init_io(void) {
   PORTA |= _BV(BUTTON_PIN);
 }
 
-void toggle_buzzer(void) {
-  if (buzzer_state) {
-    PORTA &= ~_BV(BUZZER_PIN1);
-    PORTA |= _BV(BUZZER_PIN0);
-  } else {
-    PORTA &= ~_BV(BUZZER_PIN0);
-    PORTA |= _BV(BUZZER_PIN1);
-  }
-  buzzer_state ^= 1;
-}
-
 inline void set_led(uint8_t* rgb, uint8_t timeout) {
   led_r_off = *rgb;
   led_g_off = *(rgb + 1);
@@ -182,7 +140,6 @@ int main(void) {
 
   init_io();
   init_timer0();
-  //init_timer1();
   enable_buzzer();
 
   sei();
@@ -202,9 +159,6 @@ int main(void) {
       //button is now down
       button_down_last = TRUE;
 
-      //toggle_buzzer();
-      //buzzer_max = (rand() << 3);
-      //buzzer_max = rand();
       OCR1AL = rand();
       TCNT1 = 0;
 
