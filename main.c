@@ -91,7 +91,6 @@ void init_buzzer() {
 
 void enable_buzzer(uint8_t v) {
   //toggles OC1[A,B] when the timer reaches the top
-  //TCCR1A = _BV(COM1A0) |  _BV(COM1B0);
   TCCR1A = _BV(COM1A1) | _BV(COM1A0) |  _BV(COM1B0);
   TCCR1C = _BV(FOC1A); //force one of the outputs to high
   OCR1AL = v;
