@@ -16,6 +16,8 @@
 #define PROGRAM_SUBDIV 32 
 #define STAGE_BPRESS_THRESH 16
 
+#define INITIAL_STAGE 1
+
 #define LED_R_PIN PINA4
 #define LED_G_PIN PINA3
 #define LED_B_PIN PINA2
@@ -90,7 +92,7 @@ ISR(TIM0_COMPA_vect) {
     PORTA |= _BV(LED_B_PIN);
 }
 
-void init_buzzer() {
+void init_buzzer(void) {
   //set up timer 1
   TCCR1A = 0;
   TCCR1B = 0; 
@@ -159,7 +161,7 @@ inline void set_led(uint8_t* rgb) {
   led_b_off = *(rgb + 2);
 }
 
-static uint8_t stage = 0;
+static uint8_t stage = INITIAL_STAGE;
 static uint8_t stage_subdiv = 0;
 static uint8_t stage_bpress = 0;
 static uint8_t stage_new = TRUE;
@@ -168,7 +170,7 @@ static uint32_t program_timeout = 0;
 static uint32_t led_timeout = 0;
 static uint8_t color_idx = 0;
 
-void update_stage() {
+void update_stage(void) {
   stage++;
   stage_subdiv = 0;
   stage_bpress = 0;
@@ -177,6 +179,29 @@ void update_stage() {
 
 void exec_stage(uint32_t program_time) {
   switch(stage) {
+    case 1:
+      if (stage_new || program_time == program_timeout) {
+        if (stage_state == 0) {
+          color_idx = (color_idx + 1) % NUM_COLORSETS;
+          set_led(color_sets + 3 * color_idx);
+
+          led_timeout = program_time + 1;
+
+          if ((rand() & 0xFF) < 50) {
+            program_timeout = program_time + 5 + (rand() % 10);
+            led_timeout = program_timeout;
+            //XXX choose nice tones
+            enable_buzzer(((rand() & 0xF) + 1) << 2);
+            break;
+          }
+        } else {
+          disable_buzzer();
+          program_timeout = program_time + 8 + (rand() & 0xF);
+          stage_state = 0;
+          break;
+        }
+      }
+      //allow fall through!
     case 0:
       if (stage_new)
         stage_state = 0;
@@ -188,7 +213,7 @@ void exec_stage(uint32_t program_time) {
           enable_buzzer(((rand() & 0xF) + 1) << 10);
           program_timeout = program_time + 2 + (rand() & 0x3F);
           led_timeout = program_time + 1;
-          if (rand() & 0xFF >= 75) //66% of the time turn off
+          if ((rand() & 0xFF) >= 75) //66% of the time turn off
             stage_state = 1;
         } else {
           disable_buzzer();
