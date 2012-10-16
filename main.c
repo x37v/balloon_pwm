@@ -181,23 +181,14 @@ void exec_stage(uint32_t program_time) {
   switch(stage) {
     case 1:
       if (stage_new || program_time == program_timeout) {
-        if (stage_state == 0) {
-          color_idx = (color_idx + 1) % NUM_COLORSETS;
-          set_led(color_sets + 3 * color_idx);
-
-          led_timeout = program_time + 1;
-
-          if ((rand() & 0xFF) < 50) {
-            program_timeout = program_time + 5 + (rand() % 10);
-            led_timeout = program_timeout;
-            //XXX choose nice tones
-            enable_buzzer(((rand() & 0xF) + 1) << 2);
-            break;
-          }
-        } else {
-          disable_buzzer();
-          program_timeout = program_time + 8 + (rand() & 0xF);
-          stage_state = 0;
+        if (stage_state == 0 && (rand() & 0xFF) < 60) {
+          program_timeout = program_time + 5 + (rand() % 10);
+          led_timeout = program_timeout;
+          if (led_timeout == 0)
+            led_timeout = 1;
+          //XXX choose nice tones
+          enable_buzzer(((rand() & 0xF) + 1) << 2);
+          stage_state = 1;
           break;
         }
       }
@@ -213,6 +204,8 @@ void exec_stage(uint32_t program_time) {
           enable_buzzer(((rand() & 0xF) + 1) << 10);
           program_timeout = program_time + 2 + (rand() & 0x3F);
           led_timeout = program_time + 1;
+          if (led_timeout == 0)
+            led_timeout = 1;
           if ((rand() & 0xFF) >= 75) //66% of the time turn off
             stage_state = 1;
         } else {
@@ -222,13 +215,14 @@ void exec_stage(uint32_t program_time) {
         }
       }
 
-      if (program_time == led_timeout)
-        set_led(colors_off);
       break;
     case 4:
     default:
       break;
   }
+
+  if (led_timeout && program_time == led_timeout)
+    set_led(colors_off);
 
   stage_new = FALSE;
 }
