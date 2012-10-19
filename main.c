@@ -55,8 +55,8 @@ static uint8_t stage_bpress = 0;
 static uint8_t stage_new = TRUE;
 static uint8_t stage_state = 0;
 
-static uint16_t program_timeout = 0;
-static uint16_t led_timeout = 0;
+static uint8_t program_timeout = 0;
+static uint8_t led_timeout = 0;
 static uint8_t color_idx = 0;
 
 #define FOUR_BIT_LED
@@ -160,7 +160,7 @@ inline void init_io(void) {
   PORTA = _BV(BUTTON_PIN); //button is input [0], set pullup
 }
 
-static void leds_set(uint8_t* rgb, uint16_t timeout) {
+static void leds_set(uint8_t* rgb, uint8_t timeout) {
   led_r_off = *rgb;
   led_g_off = *(rgb + 1);
   led_b_off = *(rgb + 2);
@@ -175,7 +175,7 @@ static void leds_off(void) {
   led_timeout = 0;
 }
 
-static void leds_update(uint16_t time) {
+static void leds_update(uint8_t time) {
   if (led_timeout && time == led_timeout)
     leds_off();
 }
@@ -194,7 +194,7 @@ void update_stage(void) {
   stage_new = TRUE;
 }
 
-void exec_stage(uint16_t program_time) {
+inline static void exec_stage(uint8_t program_time) {
   switch(stage) {
     case DRONE_ALL:
       if (stage_new || program_time == program_timeout) {
@@ -259,7 +259,7 @@ int main(void) {
   static uint8_t button_down_history = 0;
   static uint8_t button_down_last = FALSE;
 
-  static uint16_t program_time = 0;
+  static uint8_t program_time = 0;
 
   wdt_disable();
 
