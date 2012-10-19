@@ -21,10 +21,11 @@ typedef enum {
   DRONE_ONE,
   DRONE_ALL,
   DRONE_CLICK,
-  CLICK_FINISH
+  CLICK_FINISH,
+  DONE
 } stage_t;
 
-#define INITIAL_STAGE DRONE_ONE
+#define INITIAL_STAGE CLICK
 
 #define LED_R_PIN PINA4
 #define LED_G_PIN PINA3
@@ -62,10 +63,10 @@ static uint8_t color_idx = 0;
 
 #define FOUR_BIT_LED
 
-#define ROLLOVER_INC 64
+#define ROLLOVER_INC 128
 
 #define NUM_COLORSETS 8
-#define NUM_COLORSETS_MOD 0x3
+#define NUM_COLORSETS_MOD (NUM_COLORSETS - 1)
 static uint8_t color_sets[NUM_COLORSETS * 3] = {
   255, 255, 0,
   255, 0, 0,
@@ -80,8 +81,8 @@ static uint8_t color_sets[NUM_COLORSETS * 3] = {
 };
 
 #define NUM_DRONES 4
-#define NUM_DRONES_MOD 0x2
-static uint16_t drones[NUM_DRONES] = { 0xF, 0xFA, 0x1FA, 0xF };
+#define NUM_DRONES_MOD (NUM_DRONES - 1)
+static uint16_t drones[NUM_DRONES] = { 0xF, 0xFA, 0x2A, 0x1 };
 
 static inline uint8_t a_rand() {
 #if 1
@@ -223,11 +224,26 @@ void update_stage(void) {
 
 inline static void exec_stage(uint8_t program_time) {
   switch(stage) {
+    default:
+    case DONE:
+      leds_off();
+      disable_buzzer();
+      break;
+    case DRONE_CLICK:
+      if (stage_subdiv == 0)
+        ignite(TRUE);
+    case CLICK_FINISH:
+      if (a_rand() & 7 > 5)
+        goto click;
     case DRONE_ALL:
       if (bpress_new || stage_new || program_time == program_timeout) {
-        enable_buzzer(drones[a_rand() & NUM_DRONES_MOD]);
-        program_timeout = program_time + 20 + (a_rand() & 0x2);
+        enable_buzzer(drones[stage_state & NUM_DRONES_MOD]);
+        program_timeout = program_time + 20 + (a_rand() & 0x3);
+
+        color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
         leds_set(color_sets + 3 * color_idx, program_timeout);
+
+        stage_state++;
       } 
       break;
     case DRONE_ONE:
@@ -237,6 +253,7 @@ inline static void exec_stage(uint8_t program_time) {
         program_timeout = program_time + 1 + (a_rand() & 0x2);
         disable_buzzer();
 
+        color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
         leds_set(color_sets + 3 * color_idx, program_timeout);
       }
       break;
@@ -244,14 +261,17 @@ inline static void exec_stage(uint8_t program_time) {
       //use fall through to get clicks
       if (bpress_new || stage_new || program_time == program_timeout) {
         if (stage_state == 0 && (a_rand() & 0xFF) < 60) {
-          program_timeout = program_time + 5 + (a_rand() & 0x4);
+          program_timeout = program_time + 1 + (a_rand() & 0x3);
           enable_buzzer(drones[0]);
+          color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
+          leds_set(color_sets + 3 * color_idx, program_timeout);
           stage_state = 1;
           break;
         }
       }
       //allow fall through!
     case CLICK:
+click:
       if (stage_new)
         stage_state = 0;
 
@@ -260,7 +280,7 @@ inline static void exec_stage(uint8_t program_time) {
           color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
           enable_buzzer(((a_rand() & 0xF) + 1) << 10);
           program_timeout = program_time + 2 + (a_rand() & 0x3F);
-          leds_set(color_sets + 3 * color_idx, program_timeout + 1);
+          leds_set(color_sets + 3 * color_idx, program_time + 1);
           if ((a_rand() & 0xFF) >= 75) //66% of the time turn off
             stage_state = 1;
         } else {
@@ -270,9 +290,6 @@ inline static void exec_stage(uint8_t program_time) {
         }
       }
 
-      break;
-    case 4:
-    default:
       break;
   }
 
