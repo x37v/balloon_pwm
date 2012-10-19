@@ -54,10 +54,9 @@ static uint8_t stage_subdiv = 0;
 static uint8_t stage_bpress = 0;
 static uint8_t stage_new = TRUE;
 static uint8_t stage_state = 0;
-static uint8_t new_bpress = FALSE;
 
-static uint32_t program_timeout = 0;
-static uint32_t led_timeout = 0;
+static uint16_t program_timeout = 0;
+static uint16_t led_timeout = 0;
 static uint8_t color_idx = 0;
 
 #define FOUR_BIT_LED
@@ -163,7 +162,7 @@ inline void init_io(void) {
     | _BV(BUTTON_PIN); //button is input [0], set pullup
 }
 
-static void leds_set(uint8_t* rgb, uint32_t timeout) {
+static void leds_set(uint8_t* rgb, uint16_t timeout) {
   led_r_off = *rgb;
   led_g_off = *(rgb + 1);
   led_b_off = *(rgb + 2);
@@ -178,7 +177,7 @@ static void leds_off(void) {
   led_timeout = 0;
 }
 
-static void leds_update(uint32_t time) {
+static void leds_update(uint16_t time) {
   if (led_timeout && time == led_timeout)
     leds_off();
 }
@@ -197,19 +196,19 @@ void update_stage(void) {
   stage_new = TRUE;
 }
 
-void exec_stage(uint32_t program_time) {
+void exec_stage(uint16_t program_time) {
   switch(stage) {
     case DRONE_ALL:
-      if (new_bpress || stage_new || program_time == program_timeout) {
+      if (stage_new || program_time == program_timeout) {
         enable_buzzer(drones[rand() % NUM_DRONES]);
         program_timeout = program_time + 20 + (rand() % 5);
         leds_set(color_sets + 3 * color_idx, program_timeout);
       } 
       break;
     case DRONE_ONE:
-      if (stage_new || program_time == program_timeout) {
+      if (program_time == program_timeout) {
         enable_buzzer(drones[0]);
-      } else if (new_bpress) {
+      } else if (stage_new) {
         program_timeout = program_time + 1 + (rand() % 5);
         disable_buzzer();
 
@@ -218,12 +217,9 @@ void exec_stage(uint32_t program_time) {
       break;
     case CLICK_BURSTS:
       //use fall through to get clicks
-      if (new_bpress || stage_new || program_time == program_timeout) {
+      if (stage_new || program_time == program_timeout) {
         if (stage_state == 0 && (rand() & 0xFF) < 60) {
           program_timeout = program_time + 5 + (rand() % 10);
-          led_timeout = program_timeout;
-          if (led_timeout == 0)
-            led_timeout = 1;
           enable_buzzer(drones[0]);
           stage_state = 1;
           break;
@@ -234,7 +230,7 @@ void exec_stage(uint32_t program_time) {
       if (stage_new)
         stage_state = 0;
 
-      if (new_bpress || stage_new || program_time == program_timeout) {
+      if (stage_new || program_time == program_timeout) {
         if (stage_state == 0) {
           color_idx = (color_idx + 1) % NUM_COLORSETS;
           enable_buzzer(((rand() & 0xF) + 1) << 10);
@@ -258,7 +254,6 @@ void exec_stage(uint32_t program_time) {
   leds_update(program_time);
 
   stage_new = FALSE;
-  new_bpress = FALSE;
 }
 
 int main(void) {
@@ -266,7 +261,7 @@ int main(void) {
   static uint8_t button_down_history = 0;
   static uint8_t button_down_last = FALSE;
 
-  static uint32_t program_time = 0;
+  static uint16_t program_time = 0;
 
   wdt_disable();
 
@@ -296,7 +291,6 @@ int main(void) {
       if (stage_bpress >= STAGE_BPRESS_THRESH)
         update_stage();
 
-      new_bpress = TRUE;
     }
 
     //deal with timed events
