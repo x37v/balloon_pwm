@@ -24,7 +24,7 @@ typedef enum {
   CLICK_FINISH
 } stage_t;
 
-#define INITIAL_STAGE DRONE_ALL
+#define INITIAL_STAGE DRONE_ONE
 
 #define LED_R_PIN PINA4
 #define LED_G_PIN PINA3
@@ -157,9 +157,7 @@ inline void init_io(void) {
     | _BV(IGNITE_PIN) //igniter
     | _BV(BUZZER_PIN0) | _BV(BUZZER_PIN1); //set up output PWM
 
-  //set buzzer pin
-  PORTA |= _BV(BUZZER_PIN0)
-    | _BV(BUTTON_PIN); //button is input [0], set pullup
+  PORTA = _BV(BUTTON_PIN); //button is input [0], set pullup
 }
 
 static void leds_set(uint8_t* rgb, uint16_t timeout) {
@@ -296,10 +294,10 @@ int main(void) {
     //deal with timed events
     if (rollover) {
       program_time++;
-      ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        rollover = FALSE;
-        rollover_count = 0;
-      }
+      cli();
+      rollover = FALSE;
+      rollover_count = 0;
+      sei();
       if (program_time % PROGRAM_SUBDIV == 0) {
         stage_subdiv++;
         if (stage_subdiv >= STAGE_COUNTS)
