@@ -161,6 +161,13 @@ inline void set_led(uint8_t* rgb) {
   led_b_off = *(rgb + 2);
 }
 
+void ignite(int doit) {
+  if (doit)
+    PORTA |= _BV(IGNITE_PIN);
+  else
+    PORTA &= ~_BV(IGNITE_PIN);
+}
+
 static uint8_t stage = INITIAL_STAGE;
 static uint8_t stage_subdiv = 0;
 static uint8_t stage_bpress = 0;
@@ -257,13 +264,10 @@ int main(void) {
       //button is now down
       button_down_last = TRUE;
 
-      /*
       //update 
       stage_bpress++;
       if (stage_bpress >= STAGE_BPRESS_THRESH)
         update_stage();
-        */
-      stage_new = TRUE;
     }
 
     //deal with timed events
