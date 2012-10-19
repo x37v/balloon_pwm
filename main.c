@@ -63,19 +63,43 @@ static uint8_t color_idx = 0;
 
 #define ROLLOVER_INC 64
 
-#define NUM_COLORSETS 4
-#define NUM_COLORSETS_MOD 0x2
+#define NUM_COLORSETS 8
+#define NUM_COLORSETS_MOD 0x3
 static uint8_t color_sets[NUM_COLORSETS * 3] = {
   255, 255, 0,
   255, 0, 0,
   255, 0, 170,
   0, 255, 0,
-  //0, 1, 255
+  0, 1, 255,
+
+  //repeats
+  255, 255, 0,
+  255, 0, 0,
+  255, 0, 170,
 };
 
 #define NUM_DRONES 4
 #define NUM_DRONES_MOD 0x2
 static uint16_t drones[NUM_DRONES] = { 0xF, 0xFA, 0x1FA, 0xF };
+
+static inline uint8_t a_rand() {
+#if 1
+  static uint8_t r = 0;
+  r += 31;
+  return r;
+#else
+  //https://gist.github.com/3921043
+  static int a = 6101;
+  static int b = 997;
+  static int c = 5583;
+
+  uint8_t t = a + b + c;
+  a = b;
+  b = c;
+  c = t;
+  return t;
+#endif
+}
 
 void enable_buzzer(uint16_t v);
 void disable_buzzer(void);
@@ -200,8 +224,8 @@ inline static void exec_stage(uint8_t program_time) {
   switch(stage) {
     case DRONE_ALL:
       if (stage_new || program_time == program_timeout) {
-        enable_buzzer(drones[rand() & NUM_DRONES_MOD]);
-        program_timeout = program_time + 20 + (rand() & 0x2);
+        enable_buzzer(drones[a_rand() & NUM_DRONES_MOD]);
+        program_timeout = program_time + 20 + (a_rand() & 0x2);
         leds_set(color_sets + 3 * color_idx, program_timeout);
       } 
       break;
@@ -209,7 +233,7 @@ inline static void exec_stage(uint8_t program_time) {
       if (program_time == program_timeout) {
         enable_buzzer(drones[0]);
       } else if (stage_new) {
-        program_timeout = program_time + 1 + (rand() & 0x2);
+        program_timeout = program_time + 1 + (a_rand() & 0x2);
         disable_buzzer();
 
         leds_set(color_sets + 3 * color_idx, program_timeout);
@@ -218,8 +242,8 @@ inline static void exec_stage(uint8_t program_time) {
     case CLICK_BURSTS:
       //use fall through to get clicks
       if (stage_new || program_time == program_timeout) {
-        if (stage_state == 0 && (rand() & 0xFF) < 60) {
-          program_timeout = program_time + 5 + (rand() & 0x4);
+        if (stage_state == 0 && (a_rand() & 0xFF) < 60) {
+          program_timeout = program_time + 5 + (a_rand() & 0x4);
           enable_buzzer(drones[0]);
           stage_state = 1;
           break;
@@ -233,14 +257,14 @@ inline static void exec_stage(uint8_t program_time) {
       if (stage_new || program_time == program_timeout) {
         if (stage_state == 0) {
           color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
-          enable_buzzer(((rand() & 0xF) + 1) << 10);
-          program_timeout = program_time + 2 + (rand() & 0x3F);
+          enable_buzzer(((a_rand() & 0xF) + 1) << 10);
+          program_timeout = program_time + 2 + (a_rand() & 0x3F);
           leds_set(color_sets + 3 * color_idx, program_timeout + 1);
-          if ((rand() & 0xFF) >= 75) //66% of the time turn off
+          if ((a_rand() & 0xFF) >= 75) //66% of the time turn off
             stage_state = 1;
         } else {
           disable_buzzer();
-          program_timeout = program_time + 8 + (rand() & 0xF);
+          program_timeout = program_time + 8 + (a_rand() & 0xF);
           stage_state = 0;
         }
       }
