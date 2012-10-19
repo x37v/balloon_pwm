@@ -63,17 +63,19 @@ static uint8_t color_idx = 0;
 
 #define ROLLOVER_INC 64
 
-#define NUM_COLORSETS 5
+#define NUM_COLORSETS 4
+#define NUM_COLORSETS_MOD 0x2
 static uint8_t color_sets[NUM_COLORSETS * 3] = {
   255, 255, 0,
   255, 0, 0,
   255, 0, 170,
   0, 255, 0,
-  0, 1, 255
+  //0, 1, 255
 };
 
-#define NUM_DRONES 3
-static uint16_t drones[NUM_DRONES] = { 0xF, 0xFA, 0x1FA };
+#define NUM_DRONES 4
+#define NUM_DRONES_MOD 0x2
+static uint16_t drones[NUM_DRONES] = { 0xF, 0xFA, 0x1FA, 0xF };
 
 void enable_buzzer(uint16_t v);
 void disable_buzzer(void);
@@ -198,8 +200,8 @@ inline static void exec_stage(uint8_t program_time) {
   switch(stage) {
     case DRONE_ALL:
       if (stage_new || program_time == program_timeout) {
-        enable_buzzer(drones[rand() % NUM_DRONES]);
-        program_timeout = program_time + 20 + (rand() % 5);
+        enable_buzzer(drones[rand() & NUM_DRONES_MOD]);
+        program_timeout = program_time + 20 + (rand() & 0x2);
         leds_set(color_sets + 3 * color_idx, program_timeout);
       } 
       break;
@@ -207,7 +209,7 @@ inline static void exec_stage(uint8_t program_time) {
       if (program_time == program_timeout) {
         enable_buzzer(drones[0]);
       } else if (stage_new) {
-        program_timeout = program_time + 1 + (rand() % 5);
+        program_timeout = program_time + 1 + (rand() & 0x2);
         disable_buzzer();
 
         leds_set(color_sets + 3 * color_idx, program_timeout);
@@ -217,7 +219,7 @@ inline static void exec_stage(uint8_t program_time) {
       //use fall through to get clicks
       if (stage_new || program_time == program_timeout) {
         if (stage_state == 0 && (rand() & 0xFF) < 60) {
-          program_timeout = program_time + 5 + (rand() % 10);
+          program_timeout = program_time + 5 + (rand() & 0x4);
           enable_buzzer(drones[0]);
           stage_state = 1;
           break;
@@ -230,7 +232,7 @@ inline static void exec_stage(uint8_t program_time) {
 
       if (stage_new || program_time == program_timeout) {
         if (stage_state == 0) {
-          color_idx = (color_idx + 1) % NUM_COLORSETS;
+          color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
           enable_buzzer(((rand() & 0xF) + 1) << 10);
           program_timeout = program_time + 2 + (rand() & 0x3F);
           leds_set(color_sets + 3 * color_idx, program_timeout + 1);
