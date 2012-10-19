@@ -10,7 +10,6 @@
 #include <stdlib.h>
 #include <avr/wdt.h>
 #include <util/atomic.h>
-#include "gamma.h"
 
 #define STAGE_COUNTS 16
 #define PROGRAM_SUBDIV 32 
@@ -25,7 +24,7 @@ typedef enum {
   CLICK_FINISH
 } stage_t;
 
-#define INITIAL_STAGE DRONE_ONE
+#define INITIAL_STAGE DRONE_ALL
 
 #define LED_R_PIN PINA4
 #define LED_G_PIN PINA3
@@ -61,7 +60,6 @@ static uint32_t program_timeout = 0;
 static uint32_t led_timeout = 0;
 static uint8_t color_idx = 0;
 
-
 #define FOUR_BIT_LED
 
 #define ROLLOVER_INC 64
@@ -75,8 +73,8 @@ static uint8_t color_sets[NUM_COLORSETS * 3] = {
   0, 1, 255
 };
 
-static uint8_t colors_off[3] = {0, 0, 0};
-static uint16_t drones[3] = { 0xF, 0xFA, 0x1FA };
+#define NUM_DRONES 3
+static uint16_t drones[NUM_DRONES] = { 0xF, 0xFA, 0x1FA };
 
 void enable_buzzer(uint16_t v);
 void disable_buzzer(void);
@@ -113,7 +111,7 @@ ISR(TIM0_COMPA_vect) {
     PORTA |= _BV(LED_B_PIN);
 }
 
-void init_buzzer(void) {
+inline void init_buzzer(void) {
   //set up timer 1
   TCCR1A = 0;
   TCCR1B = 0; 
@@ -136,11 +134,11 @@ void enable_buzzer(uint16_t v) {
   TCNT1 = 0;
 }
 
-void disable_buzzer(void) {
+inline void disable_buzzer(void) {
   TCCR1A = 0;
 }
 
-void init_timer0(void) {
+inline void init_timer0(void) {
   TCCR0A = 0; //normal mode
   TCCR0B = _BV(CS00); //no prescale
 #ifdef FOUR_BIT_LED
@@ -154,26 +152,15 @@ void init_timer0(void) {
   TIFR0 = _BV(OCF0A);
 }
 
-void init_io(void) {
-  //enable pullups
-  MCUCR &= ~_BV(PUD);
-
-  DDRA = 0;
-
+inline void init_io(void) {
   //LED OUT
-  DDRA |= _BV(LED_R_PIN) | _BV(LED_G_PIN) | _BV(LED_B_PIN);
-
-  //igniter
-  DDRA |= _BV(IGNITE_PIN);
-
-  //set up output PWM
-  DDRA |= _BV(BUZZER_PIN0) | _BV(BUZZER_PIN1);
+  DDRA = _BV(LED_R_PIN) | _BV(LED_G_PIN) | _BV(LED_B_PIN)
+    | _BV(IGNITE_PIN) //igniter
+    | _BV(BUZZER_PIN0) | _BV(BUZZER_PIN1); //set up output PWM
 
   //set buzzer pin
-  PORTA |= _BV(BUZZER_PIN0);
-
-  //button is input [0], set pullup
-  PORTA |= _BV(BUTTON_PIN);
+  PORTA |= _BV(BUZZER_PIN0)
+    | _BV(BUTTON_PIN); //button is input [0], set pullup
 }
 
 static void leds_set(uint8_t* rgb, uint32_t timeout) {
@@ -181,9 +168,7 @@ static void leds_set(uint8_t* rgb, uint32_t timeout) {
   led_g_off = *(rgb + 1);
   led_b_off = *(rgb + 2);
 
-  if (timeout == 0)
-    timeout = 1;
-  led_timeout = timeout;
+  led_timeout = timeout == 0 ? 1 : timeout;
 }
 
 static void leds_off(void) {
@@ -198,7 +183,7 @@ static void leds_update(uint32_t time) {
     leds_off();
 }
 
-void ignite(int doit) {
+static void ignite(int doit) {
   if (doit)
     PORTA |= _BV(IGNITE_PIN);
   else
@@ -214,6 +199,13 @@ void update_stage(void) {
 
 void exec_stage(uint32_t program_time) {
   switch(stage) {
+    case DRONE_ALL:
+      if (new_bpress || stage_new || program_time == program_timeout) {
+        enable_buzzer(drones[rand() % NUM_DRONES]);
+        program_timeout = program_time + 20 + (rand() % 5);
+        leds_set(color_sets + 3 * color_idx, program_timeout);
+      } 
+      break;
     case DRONE_ONE:
       if (stage_new || program_time == program_timeout) {
         enable_buzzer(drones[0]);

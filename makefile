@@ -114,7 +114,8 @@ OBJDIR = .
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC = main.c gamma.c
+#SRC = main.c gamma.c
+SRC = main.c
 
 # List C++ source files here. (C dependencies are automatically generated.)
 CPPSRC = 
