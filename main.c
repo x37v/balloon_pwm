@@ -54,6 +54,7 @@ static uint8_t stage_subdiv = 0;
 static uint8_t stage_bpress = 0;
 static uint8_t stage_new = TRUE;
 static uint8_t stage_state = 0;
+static uint8_t bpress_new = FALSE;
 
 static uint8_t program_timeout = 0;
 static uint8_t led_timeout = 0;
@@ -223,16 +224,16 @@ void update_stage(void) {
 inline static void exec_stage(uint8_t program_time) {
   switch(stage) {
     case DRONE_ALL:
-      if (stage_new || program_time == program_timeout) {
+      if (bpress_new || stage_new || program_time == program_timeout) {
         enable_buzzer(drones[a_rand() & NUM_DRONES_MOD]);
         program_timeout = program_time + 20 + (a_rand() & 0x2);
         leds_set(color_sets + 3 * color_idx, program_timeout);
       } 
       break;
     case DRONE_ONE:
-      if (program_time == program_timeout) {
+      if (stage_new || program_time == program_timeout) {
         enable_buzzer(drones[0]);
-      } else if (stage_new) {
+      } else if (bpress_new) {
         program_timeout = program_time + 1 + (a_rand() & 0x2);
         disable_buzzer();
 
@@ -241,7 +242,7 @@ inline static void exec_stage(uint8_t program_time) {
       break;
     case CLICK_BURSTS:
       //use fall through to get clicks
-      if (stage_new || program_time == program_timeout) {
+      if (bpress_new || stage_new || program_time == program_timeout) {
         if (stage_state == 0 && (a_rand() & 0xFF) < 60) {
           program_timeout = program_time + 5 + (a_rand() & 0x4);
           enable_buzzer(drones[0]);
@@ -254,7 +255,7 @@ inline static void exec_stage(uint8_t program_time) {
       if (stage_new)
         stage_state = 0;
 
-      if (stage_new || program_time == program_timeout) {
+      if (bpress_new || stage_new || program_time == program_timeout) {
         if (stage_state == 0) {
           color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
           enable_buzzer(((a_rand() & 0xF) + 1) << 10);
@@ -277,7 +278,8 @@ inline static void exec_stage(uint8_t program_time) {
 
   leds_update(program_time);
 
-  stage_new = FALSE;
+  bpress_new = 
+    stage_new = FALSE;
 }
 
 int main(void) {
@@ -310,11 +312,12 @@ int main(void) {
       //button is now down
       button_down_last = TRUE;
 
+      bpress_new = TRUE;
+
       //update 
       stage_bpress++;
       if (stage_bpress >= STAGE_BPRESS_THRESH)
         update_stage();
-
     }
 
     //deal with timed events
