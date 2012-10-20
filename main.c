@@ -25,7 +25,7 @@ typedef enum {
   DONE
 } stage_t;
 
-#define INITIAL_STAGE CLICK
+#define INITIAL_STAGE DRONE_ONE
 
 #define LED_R_PIN PINA4
 #define LED_G_PIN PINA3
@@ -80,9 +80,29 @@ static uint8_t color_sets[NUM_COLORSETS * 3] = {
   255, 0, 170,
 };
 
-#define NUM_DRONES 4
+#define NUM_DRONES 16
 #define NUM_DRONES_MOD (NUM_DRONES - 1)
-static uint16_t drones[NUM_DRONES] = { 0xF, 0xFA, 0x2A, 0x1 };
+//y = -0.477272727272727 * x + 7821.70454545455
+static uint16_t drones[NUM_DRONES] = {
+  307, // <= 15746
+  197, // <= 15976
+  229, // <= 15908
+  119, // <= 16139
+  148, // <= 16079
+  132, // <= 16112
+  297, // <= 15767
+  98, // <= 16183
+  393, // <= 15565
+  458, // <= 15427
+
+  //repeats
+  307, // <= 15746
+  197, // <= 15976
+  229, // <= 15908
+  119, // <= 16139
+  148, // <= 16079
+  132 // <= 16112
+};
 
 static inline uint8_t a_rand() {
 #if 1
@@ -147,7 +167,8 @@ inline void init_buzzer(void) {
   OCR1AL = 0xF;
 
   //CTC mode, resets clock when it meets OCR1A
-  TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
+  //TCCR1B = _BV(WGM12) | _BV(CS10) | _BV(CS11);
+  TCCR1B = _BV(WGM12) | _BV(CS11);
 
   TIMSK1 = 0;
 }
