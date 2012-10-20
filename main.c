@@ -276,24 +276,37 @@ inline static void exec_stage(uint8_t program_time) {
         uint8_t r = a_rand() & 0x3;
         //big timeout range
         //random color selections
-        program_timeout = program_time + (a_rand() & 0x7F);
+        if ((a_rand() & 0xF) > 4)
+          program_timeout + program_time + 1;
+        else
+          program_timeout = program_time + (a_rand() & 0x7F);
+
         color_idx = (a_rand()) & NUM_COLORSETS_MOD;
         //XXX should we actually do random colors?
 
         switch (r) {
           case 0:
+            stage_state = 0;
             enable_buzzer(drones[a_rand() & NUM_DRONES_MOD]);
             leds_set(color_sets + 3 * color_idx, program_timeout);
             break;
           case 1:
+            stage_state = 1;
             disable_buzzer();
             leds_off();
             break;
           case 2:
           default:
+            stage_state = 2;
             enable_buzzer(((a_rand() & 0x1F) + 1) << 11);
-            leds_set(color_sets + 3 * color_idx, program_timeout);
+            leds_set(color_sets + 3 * color_idx, 1);
             break;
+        }
+      } else if (stage_state == 2 && led_timeout == 0) {
+        //flash on clicks
+        if ((a_rand() & 0xF) > 9) {
+          color_idx = (a_rand()) & NUM_COLORSETS_MOD;
+          leds_set(color_sets + 3 * color_idx, program_time + 1);
         }
       }
       break;
