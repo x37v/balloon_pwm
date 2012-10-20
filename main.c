@@ -14,6 +14,7 @@
 #define STAGE_COUNTS 16
 #define PROGRAM_SUBDIV 32 
 #define STAGE_BPRESS_THRESH 16
+#define USE_REAL_RAND 1
 
 typedef enum {
   CLICK = 0,
@@ -108,6 +109,11 @@ static uint16_t drones[NUM_DRONES] = {
   2 + 132 // <= 16112
 };
 
+#if USE_REAL_RAND
+#define a_rand rand
+
+#else
+
 static inline uint8_t a_rand() {
 #if 1
   static uint8_t r = 0;
@@ -126,6 +132,7 @@ static inline uint8_t a_rand() {
   return t;
 #endif
 }
+#endif
 
 void enable_buzzer(uint16_t v);
 void disable_buzzer(void);
