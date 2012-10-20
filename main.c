@@ -14,7 +14,7 @@
 #define STAGE_COUNTS 16
 #define PROGRAM_SUBDIV 32 
 #define STAGE_BPRESS_THRESH 16
-#define USE_REAL_RAND 1
+#define USE_REAL_RAND 0
 
 #ifndef RANDOM_SEED
 #define RANDOM_SEED 125
@@ -30,6 +30,17 @@ typedef enum {
   CLICK_FINISH,
   DONE
 } stage_t;
+
+static uint8_t stage_lens[] = {
+  1,//INTRO = 0,
+  1,//CLICK,
+  2,//CLICK_BURSTS,
+  1,//DRONE_ONE,
+  3,//DRONE_ALL,
+  2,//DRONE_CLICK,
+  1,//CLICK_FINISH,
+  1//DONE
+};
 
 #define INITIAL_STAGE INTRO
 
@@ -66,6 +77,7 @@ static uint8_t stage_bpress = 0;
 static uint8_t stage_new = TRUE;
 static uint8_t stage_state = 0;
 static uint8_t bpress_new = FALSE;
+static uint8_t stage_length = 1;
 
 static uint8_t program_timeout = 0;
 static uint8_t led_timeout = 0;
@@ -257,6 +269,9 @@ void update_stage(void) {
   stage_subdiv = 0;
   stage_bpress = 0;
   stage_new = TRUE;
+  if (stage >= DONE)
+    stage = DONE;
+  stage_length = stage_lens[stage];
 }
 
 inline static void exec_stage(uint8_t program_time) {
@@ -400,7 +415,9 @@ int main(void) {
 
   static uint8_t program_time = 0;
 
-#ifdef USE_REAL_RAND
+  stage_length = stage_lens[stage];
+
+#if USE_REAL_RAND
   srand(RANDOM_SEED);
 #endif
 
@@ -431,7 +448,7 @@ int main(void) {
 
       //update 
       stage_bpress++;
-      if (stage_bpress >= STAGE_BPRESS_THRESH)
+      if (stage_bpress >= (STAGE_BPRESS_THRESH * stage_length))
         update_stage();
     }
 
@@ -442,7 +459,7 @@ int main(void) {
       rollover = FALSE;
       rollover_count = 0;
       sei();
-      if (program_time % PROGRAM_SUBDIV == 0) {
+      if (program_time % (PROGRAM_SUBDIV * stage_length) == 0) {
         stage_subdiv++;
         if (stage_subdiv >= STAGE_COUNTS)
           update_stage();
