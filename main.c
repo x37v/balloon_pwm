@@ -24,9 +24,13 @@ typedef enum {
   INTRO = 0,
   CLICK,
   CLICK_BURSTS,
+  CLICK_BURSTS2,
   DRONE_ONE,
   DRONE_ALL,
+  DRONE_ALL2,
+  DRONE_ALL3,
   DRONE_CLICK,
+  DRONE_CLICK2,
   CLICK_FINISH,
   DONE
 } stage_t;
@@ -261,12 +265,12 @@ void update_stage(void) {
 
 inline static void exec_stage(uint8_t program_time) {
   switch(stage) {
-    default:
     case DONE:
       leds_off();
       disable_buzzer();
       break;
     case DRONE_CLICK:
+    case DRONE_CLICK2:
       if (stage_new) {
         color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
         leds_set(color_sets + 3 * color_idx, program_timeout);
@@ -316,6 +320,8 @@ inline static void exec_stage(uint8_t program_time) {
       }
       break;
     case DRONE_ALL:
+    case DRONE_ALL2:
+    case DRONE_ALL3:
       if (bpress_new || stage_new || program_time == program_timeout) {
         program_timeout = program_time + 30 + (a_rand() & 0xF);
         color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
@@ -338,10 +344,11 @@ inline static void exec_stage(uint8_t program_time) {
       }
       break;
     case CLICK_BURSTS:
+    case CLICK_BURSTS2:
       //use fall through to get clicks
       if (bpress_new || stage_new || program_time == program_timeout) {
-        if (stage_state == 0 && (a_rand() & 0xFF) < 60) {
-          program_timeout = program_time + 1 + (a_rand() & 0x3);
+        if (stage_state == 0 && (a_rand() & 0xFF) < 40) {
+          program_timeout = program_time + 1 + (a_rand() & 0x7);
           enable_buzzer(drones[0]);
           color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
           leds_set(color_sets + 3 * color_idx, program_timeout);
@@ -400,7 +407,7 @@ int main(void) {
 
   static uint8_t program_time = 0;
 
-#ifdef USE_REAL_RAND
+#if USE_REAL_RAND
   srand(RANDOM_SEED);
 #endif
 
