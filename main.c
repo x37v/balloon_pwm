@@ -16,8 +16,13 @@
 #define STAGE_BPRESS_THRESH 16
 #define USE_REAL_RAND 1
 
+#ifndef RANDOM_SEED
+#define RANDOM_SEED 125
+#endif
+
 typedef enum {
-  CLICK = 0,
+  INTRO = 0,
+  CLICK,
   CLICK_BURSTS,
   DRONE_ONE,
   DRONE_ALL,
@@ -26,7 +31,7 @@ typedef enum {
   DONE
 } stage_t;
 
-#define INITIAL_STAGE DRONE_CLICK
+#define INITIAL_STAGE INTRO
 
 #define LED_R_PIN PINA4
 #define LED_G_PIN PINA3
@@ -116,7 +121,7 @@ static uint16_t drones[NUM_DRONES] = {
 
 static inline uint8_t a_rand() {
 #if 1
-  static uint8_t r = 0;
+  static uint8_t r = RANDOM_SEED;
   r += 31;
   return r;
 #else
@@ -263,11 +268,11 @@ inline static void exec_stage(uint8_t program_time) {
       break;
     case DRONE_CLICK:
       if (stage_new) {
-        ignite(TRUE);
         color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
         leds_set(color_sets + 3 * color_idx, program_timeout);
         enable_buzzer(drones[stage_state & NUM_DRONES_MOD]);
-        _delay_ms(500);
+        ignite(TRUE);
+        _delay_ms(5000);
         ignite(FALSE);
       }
       //allow fall through
@@ -277,7 +282,7 @@ inline static void exec_stage(uint8_t program_time) {
         //big timeout range
         //random color selections
         if ((a_rand() & 0xF) > 4)
-          program_timeout + program_time + 1;
+          program_timeout = program_time + 1;
         else
           program_timeout = program_time + (a_rand() & 0x7F);
 
@@ -363,6 +368,21 @@ inline static void exec_stage(uint8_t program_time) {
           stage_state = 0;
         }
       }
+      break;
+    case INTRO:
+      if (stage_new)
+        stage_state = 0;
+
+      if (bpress_new) {
+        if (stage_state == 0) {
+          leds_set(color_sets, program_time + 100);
+        } else if (stage_state == 1) {
+          leds_off();
+        }
+        stage_state++;
+        if (stage_state >= 6)
+          update_stage();
+      }
 
       break;
   }
@@ -379,6 +399,10 @@ int main(void) {
   static uint8_t button_down_last = FALSE;
 
   static uint8_t program_time = 0;
+
+#ifdef USE_REAL_RAND
+  srand(RANDOM_SEED);
+#endif
 
   wdt_disable();
 
