@@ -25,7 +25,7 @@ typedef enum {
   DONE
 } stage_t;
 
-#define INITIAL_STAGE DRONE_ONE
+//#define INITIAL_STAGE CLICK
 
 #define LED_R_PIN PINA4
 #define LED_G_PIN PINA3
@@ -50,7 +50,11 @@ volatile uint8_t led_b_off = 0;
 volatile uint16_t rollover_count = 0;
 volatile uint8_t rollover = FALSE;
 
+#ifdef INITIAL_STAGE
 static uint8_t stage = INITIAL_STAGE;
+#else
+static uint8_t stage = 0;
+#endif
 static uint8_t stage_subdiv = 0;
 static uint8_t stage_bpress = 0;
 static uint8_t stage_new = TRUE;
@@ -96,12 +100,12 @@ static uint16_t drones[NUM_DRONES] = {
   458, // <= 15427
 
   //repeats
-  307, // <= 15746
-  197, // <= 15976
-  229, // <= 15908
-  119, // <= 16139
-  148, // <= 16079
-  132 // <= 16112
+  2 + 307, // <= 15746
+  2 + 197, // <= 15976
+  2 + 229, // <= 15908
+  2 + 119, // <= 16139
+  2 + 148, // <= 16079
+  2 + 132 // <= 16112
 };
 
 static inline uint8_t a_rand() {
@@ -251,15 +255,21 @@ inline static void exec_stage(uint8_t program_time) {
       disable_buzzer();
       break;
     case DRONE_CLICK:
-      if (stage_subdiv == 0)
+      if (stage_new) {
         ignite(TRUE);
+        color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
+        leds_set(color_sets + 3 * color_idx, program_timeout);
+        enable_buzzer(drones[stage_state & NUM_DRONES_MOD]);
+        _delay_ms(500);
+        ignite(FALSE);
+      }
     case CLICK_FINISH:
       if (a_rand() & 7 > 5)
         goto click;
     case DRONE_ALL:
       if (bpress_new || stage_new || program_time == program_timeout) {
         enable_buzzer(drones[stage_state & NUM_DRONES_MOD]);
-        program_timeout = program_time + 20 + (a_rand() & 0x3);
+        program_timeout = program_time + 30 + (a_rand() & 0xF);
 
         color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
         leds_set(color_sets + 3 * color_idx, program_timeout);
@@ -299,7 +309,7 @@ click:
       if (bpress_new || stage_new || program_time == program_timeout) {
         if (stage_state == 0) {
           color_idx = (color_idx + 1) & NUM_COLORSETS_MOD;
-          enable_buzzer(((a_rand() & 0xF) + 1) << 10);
+          enable_buzzer(((a_rand() & 0xF) + 1) << 12);
           program_timeout = program_time + 2 + (a_rand() & 0x3F);
           leds_set(color_sets + 3 * color_idx, program_time + 1);
           if ((a_rand() & 0xFF) >= 75) //66% of the time turn off
